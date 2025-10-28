@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>選手簽到系統</title>
+    <link rel="stylesheet" href="./styles.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <!-- 標題區域 -->
+        <header class="header">
+            <div class="logo">
+                <i class="fas fa-clock"></i>
+                <h1>選手簽到系統</h1>
+            </div>
+            <div class="header-actions">
+                <a href="https://sci-me.k12ea.gov.tw/Contest/ContestAnnounList?c_class=2" class="btn btn-info btn-small">
+                    <i class="fas fa-tachometer-alt"></i>
+                    
+                </a>
+                <div class="countdown-timer" id="countdownTimer">
+                    <div class="countdown-label">距離114/12/1</div>
+                    <div class="countdown-display" id="countdownDisplay">計算中...</div>
+                </div>
+                <div class="current-time" id="currentTime"></div>
+            </div>
+        </header>
+
+        <!-- 主要表單區域 -->
+        <main class="main-content">
+            <div class="form-container">
+                <div class="form-header">
+                    <h2>114選手簽到表單</h2>
+                    <p>請填寫以下資訊完成簽到</p>
+                </div>
+
+                <form id="attendanceForm" class="attendance-form">
+                    <!-- 員工資訊 -->
+                    <div class="form-section">
+                        <h3><i class="fas fa-user"></i> 選手資訊</h3>
+                        
+                        <div class="form-group">
+                            <label for="employeeName">姓名 *</label>
+                            <input type="text" id="employeeName" name="employeeName" required 
+                                   placeholder="請輸入姓名" autocomplete="name">
+                            <div class="error-message" id="employeeNameError"></div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="department">班級 *</label>
+                            <select id="department" name="department" required>
+                                <option value="">請選擇班級</option>
+                                <option value="IT">選手</option>
+                            </select>
+                            <div class="error-message" id="departmentError"></div>
+                        </div>
+                    </div>
+
+                    <!-- 簽到資訊 -->
+                    <div class="form-section">
+                        <h3><i class="fas fa-calendar-check"></i> 簽到資訊</h3>
+                        
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="attendanceDate">日期 *</label>
+                                <input type="date" id="attendanceDate" name="attendanceDate" required>
+                                <div class="error-message" id="attendanceDateError"></div>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="attendanceTime">時間 *</label>
+                                <div class="time-input-group">
+                                    <input type="time" id="attendanceTime" name="attendanceTime" required>
+                                    <button type="button" id="useCurrentTimeBtn" class="btn btn-small btn-info">
+                                        <i class="fas fa-clock"></i>
+                                        使用現在時間
+                                    </button>
+                                </div>
+                                <div class="error-message" id="attendanceTimeError"></div>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="attendanceType">簽到類型 *</label>
+                            <div class="radio-group">
+                                <label class="radio-label">
+                                    <input type="radio" name="attendanceType" value="checkin" required>
+                                    <span class="radio-custom"></span>
+                                    <i class="fas fa-sign-in-alt"></i>
+                                    上學簽到
+                                </label>
+                                <label class="radio-label">
+                                    <input type="radio" name="attendanceType" value="checkout" required>
+                                    <span class="radio-custom"></span>
+                                    <i class="fas fa-sign-out-alt"></i>
+                                    放學簽退
+                                </label>
+                            </div>
+                            <div class="error-message" id="attendanceTypeError"></div>
+                        </div>
+                    </div>
+
+                    <!-- 位置資訊 -->
+                    <div class="form-section">
+                        <h3><i class="fas fa-map-marker-alt"></i> 位置資訊</h3>
+                        
+                        <div class="form-group">
+                            <label for="location">簽到地點 *</label>
+                            <select id="location" name="location" required>
+                                <option value="">請選擇簽到地點</option>
+                                <option value="office">選手教室</option>
+                               
+                            </select>
+                            <div class="error-message" id="locationError"></div>
+                        </div>
+
+                        <div class="form-group" id="customLocationGroup" style="display: none;">
+                            <label for="customLocation">請說明其他地點</label>
+                            <input type="text" id="customLocation" name="customLocation" 
+                                   placeholder="請詳細說明簽到地點">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="notes">備註</label>
+                            <textarea id="notes" name="notes" rows="3" 
+                                      placeholder="如有特殊情況請在此說明..."></textarea>
+                        </div>
+                    </div>
+
+                    <!-- 提交按鈕 -->
+                    <div class="form-actions">
+                        <button type="button" id="resetBtn" class="btn btn-secondary">
+                            <i class="fas fa-undo"></i>
+                            重置表單
+                        </button>
+                        
+                        <button type="submit" id="submitBtn" class="btn btn-primary">
+                            <i class="fas fa-paper-plane"></i>
+                            提交簽到
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- 側邊資訊面板 -->
+            <aside class="info-panel">
+                <div class="info-card">
+                    <h3><i class="fas fa-info-circle"></i> 簽到須知</h3>
+                    <ul>
+                        <li>請確保所有必填欄位都已填寫</li>
+                        <li>簽到時間請以實際時間為準</li>
+                        <li>請到校後用學校電腦填寫</li>
+                        <li>系統會自動記錄提交時間</li>
+                    </ul>
+                </div>
+
+                <div class="info-card">
+                    <h3><i class="fas fa-clock"></i> 工作時間</h3>
+                    <div class="work-hours">
+                        <div class="time-slot">
+                            <span class="label">上學時間:</span>
+                            <span class="time">08:00</span>
+                        </div>
+                        <div class="time-slot">
+                            <span class="label">放學時間:</span>
+                            <span class="time">21:00</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="info-card">
+                    <h3><i class="fas fa-chart-bar"></i> 今日統計</h3>
+                    <div class="stats">
+                        <div class="stat-item">
+                            <span class="stat-number" id="todayCheckins">0</span>
+                            <span class="stat-label">已簽到</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-number" id="todayCheckouts">0</span>
+                            <span class="stat-label">已簽退</span>
+                        </div>
+                    </div>
+                    
+                    <!-- 今日簽到學生列表 -->
+                    <div class="today-attendance-list" id="todayAttendanceList" style="margin-top: 15px; display: none;">
+                        <h4 style="color: #667eea; margin-bottom: 10px; font-size: 0.9rem;">
+                            <i class="fas fa-users"></i> 今日簽到學生
+                        </h4>
+                        <div class="attendance-list" id="attendanceList">
+                            <!-- 簽到學生列表將在這裡動態生成 -->
+                        </div>
+                    </div>
+                </div>
+            </aside>
+        </main>
+
+        <!-- 成功提示模態框 -->
+        <div id="successModal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <i class="fas fa-check-circle success-icon"></i>
+                    <h2>簽到成功！</h2>
+                </div>
+                <div class="modal-body">
+                    <p id="successMessage">您的簽到資訊已成功提交</p>
+                    <div class="submission-details" id="submissionDetails"></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" id="closeModal" class="btn btn-primary">確定</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 載入動畫 -->
+        <div id="loadingOverlay" class="loading-overlay">
+            <div class="loading-spinner">
+                <i class="fas fa-spinner fa-spin"></i>
+                <p>正在提交簽到資訊...</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- 載入Supabase客戶端 -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="./supabase-config.js"></script>
+    <script src="./script.js"></script>
+</body>
+</html>
