@@ -851,33 +851,59 @@ class AttendanceSystem {
     // 從 Supabase 載入今日記錄
     async loadTodayRecordsFromSupabase() {
         try {
-            if (!window.attendanceManager) {
-                console.warn('AttendanceManager 未初始化，跳過 Supabase 統計');
-                // 使用本地數據更新列表
-                const today = new Date().toISOString().split('T')[0];
-                const todayData = this.attendanceData.filter(item => item.attendanceDate === today);
-                this.updateTodayAttendanceList(todayData);
-                return;
+            console.log('🔄 開始從 Supabase 載入今日記錄...');
+            
+            // 嘗試多種方式獲取 Supabase 客戶端
+            let supabaseClient = null;
+            
+            // 方法1: 從 window.attendanceManager 獲取
+            if (window.attendanceManager && window.attendanceManager.supabase) {
+                supabaseClient = window.attendanceManager.supabase;
+                console.log('✅ 從 attendanceManager 獲取客戶端');
+            } 
+            // 方法2: 從 window.supabaseConfig 獲取
+            else if (window.supabaseConfig && window.supabaseConfig.getClient) {
+                try {
+                    supabaseClient = window.supabaseConfig.getClient();
+                    console.log('✅ 從 supabaseConfig 獲取客戶端');
+                } catch (e) {
+                    console.warn('⚠️ 無法從 supabaseConfig 獲取客戶端:', e);
+                }
+            }
+            // 方法3: 創建新客戶端（使用寫死的配置）
+            else if (typeof supabase !== 'undefined') {
+                console.log('⚠️ 創建新的客戶端');
+                supabaseClient = supabase.createClient(
+                    'https://gtokauywjdcnqmlxugur.supabase.co',
+                    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd0b2thdXl3amRjbnFtbHh1Z3VyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjExNDg1OTEsImV4cCI6MjA3NjcyNDU5MX0.1zihmDGER5PDeX41XCorsLqeh4Dks26cZq00BdpgkC4'
+                );
             }
             
-            // 確保初始化
-            await window.attendanceManager.initialize();
+            if (!supabaseClient) {
+                throw new Error('無法獲取 Supabase 客戶端');
+            }
             
             // 從 Supabase 獲取今日記錄
             const today = new Date().toISOString().split('T')[0];
-            const result = await window.attendanceManager.getAttendanceRecords(
-                { date: today }, 
-                100, 
-                0
-            );
+            console.log(`📅 查詢日期: ${today}`);
             
-            if (result.success) {
-                console.log(`從 Supabase 獲取今日記錄: ${result.data.length} 筆`);
-                
+            const { data, error } = await supabaseClient
+                .from('attendance_records')
+                .select('*')
+                .eq('attendance_date', today)
+                .order('submitted_at', { ascending: false });
+            
+            if (error) {
+                throw new Error(`查詢錯誤: ${error.message}`);
+            }
+            
+            console.log(`✅ 從 Supabase 獲取今日記錄: ${data ? data.length : 0} 筆`);
+            
+            if (data && data.length > 0) {
                 // 轉換為本地格式
-                const todayData = result.data.map(record => {
-                    // 處理時間格式：可能是 "HH:MM" 或 "HH:MM:SS"
-                    let timeStr = record.attendance_time;
+                const todayData = data.map(record => {
+                    // 處理時間格式
+                    let timeStr = record.attendance_time || '';
                     if (timeStr.includes(':')) {
                         const parts = timeStr.split(':');
                         timeStr = `${parts[0]}:${parts[1]}`; // 只取 HH:MM
@@ -902,19 +928,29 @@ class AttendanceSystem {
                 document.getElementById('todayCheckins').textContent = checkins;
                 document.getElementById('todayCheckouts').textContent = checkouts;
                 
+                console.log(`📊 統計更新: 簽到 ${checkins} 人，簽退 ${checkouts} 人`);
+                
                 // 更新列表
                 this.updateTodayAttendanceList(todayData);
             } else {
-                console.warn('獲取 Supabase 記錄失敗，使用本地數據');
-                const today = new Date().toISOString().split('T')[0];
-                const todayData = this.attendanceData.filter(item => item.attendanceDate === today);
-                this.updateTodayAttendanceList(todayData);
+                console.log('📭 今日尚無記錄');
+                document.getElementById('todayCheckins').textContent = '0';
+                document.getElementById('todayCheckouts').textContent = '0';
+                this.updateTodayAttendanceList([]);
             }
+            
         } catch (error) {
-            console.error('載入 Supabase 今日記錄失敗:', error);
+            console.error('❌ 載入 Supabase 今日記錄失敗:', error);
             // 使用本地數據作為備用
             const today = new Date().toISOString().split('T')[0];
             const todayData = this.attendanceData.filter(item => item.attendanceDate === today);
+            
+            const checkins = todayData.filter(item => item.attendanceType === 'checkin').length;
+            const checkouts = todayData.filter(item => item.attendanceType === 'checkout').length;
+            
+            document.getElementById('todayCheckins').textContent = checkins;
+            document.getElementById('todayCheckouts').textContent = checkouts;
+            
             this.updateTodayAttendanceList(todayData);
         }
     }
