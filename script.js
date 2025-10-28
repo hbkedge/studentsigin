@@ -875,16 +875,25 @@ class AttendanceSystem {
                 console.log(`從 Supabase 獲取今日記錄: ${result.data.length} 筆`);
                 
                 // 轉換為本地格式
-                const todayData = result.data.map(record => ({
-                    id: record.id,
-                    employeeName: record.employee_name,
-                    department: record.department,
-                    attendanceDate: record.attendance_date,
-                    attendanceTime: record.attendance_time.substring(0, 5), // 轉換 HH:MM:SS 為 HH:MM
-                    attendanceType: record.attendance_type,
-                    location: record.location,
-                    customLocation: record.custom_location
-                }));
+                const todayData = result.data.map(record => {
+                    // 處理時間格式：可能是 "HH:MM" 或 "HH:MM:SS"
+                    let timeStr = record.attendance_time;
+                    if (timeStr.includes(':')) {
+                        const parts = timeStr.split(':');
+                        timeStr = `${parts[0]}:${parts[1]}`; // 只取 HH:MM
+                    }
+                    
+                    return {
+                        id: record.id,
+                        employeeName: record.employee_name,
+                        department: record.department,
+                        attendanceDate: record.attendance_date,
+                        attendanceTime: timeStr,
+                        attendanceType: record.attendance_type,
+                        location: record.location,
+                        customLocation: record.custom_location
+                    };
+                });
                 
                 // 更新統計數字
                 const checkins = todayData.filter(item => item.attendanceType === 'checkin').length;
@@ -922,14 +931,32 @@ class AttendanceSystem {
         
         if (todayData.length === 0) {
             todayAttendanceList.style.display = 'none';
+            attendanceListContainer.innerHTML = '<p style="text-align: center; color: #999; padding: 20px;">今日尚無簽到記錄</p>';
             return;
         }
         
         // 按時間排序（最新的在前）
         const sortedData = todayData.sort((a, b) => {
-            const timeA = new Date(`${a.attendanceDate}T${a.attendanceTime}`);
-            const timeB = new Date(`${b.attendanceDate}T${b.attendanceTime}`);
-            return timeB - timeA;
+            // 合併日期和時間進行比較
+            const timeA = `${a.attendanceDate}T${a.attendanceTime}`;
+            const timeB = `${b.attendanceDate}T${b.attendanceTime}`;
+            
+            // 如果時間長度不同，補零處理
+            const normalizeTime = (timeStr) => {
+                if (timeStr.includes(':')) {
+                    const parts = timeStr.split(':');
+                    if (parts.length === 2) {
+                        return `${parts[0]}:${parts[1]}:00`; // 補秒數
+                    }
+                    return timeStr;
+                }
+                return timeStr;
+            };
+            
+            const finalTimeA = new Date(`${a.attendanceDate}T${normalizeTime(a.attendanceTime)}`).getTime();
+            const finalTimeB = new Date(`${b.attendanceDate}T${normalizeTime(b.attendanceTime)}`).getTime();
+            
+            return finalTimeB - finalTimeA;
         });
         
         // 生成簽到學生列表HTML
@@ -937,11 +964,14 @@ class AttendanceSystem {
             const typeText = item.attendanceType === 'checkin' ? '簽到' : '簽退';
             const typeClass = item.attendanceType;
             
+            // 格式化時間顯示（只顯示時分）
+            const timeDisplay = item.attendanceTime.length >= 5 ? item.attendanceTime.substring(0, 5) : item.attendanceTime;
+            
             return `
                 <div class="attendance-item">
                     <div class="attendance-student">${item.employeeName}</div>
                     <div style="display: flex; align-items: center; gap: 8px;">
-                        <span class="attendance-time">${item.attendanceTime}</span>
+                        <span class="attendance-time">${timeDisplay}</span>
                         <span class="attendance-type ${typeClass}">${typeText}</span>
                     </div>
                 </div>
@@ -951,7 +981,7 @@ class AttendanceSystem {
         attendanceListContainer.innerHTML = listHTML;
         todayAttendanceList.style.display = 'block';
         
-        console.log(`更新今日簽到列表，共 ${todayData.length} 筆記錄`);
+        console.log(`✅ 更新今日簽到列表，共 ${todayData.length} 筆記錄`);
     }
 
     // 顯示通知
